@@ -2,6 +2,7 @@ library(dplyr)
 library(VIM)
 library(naniar)
 library(ggplot2)
+library(umap)
 library(mice)
 library(survival)
 library(cmprsk)
@@ -54,6 +55,14 @@ plot(survfit(data = cirrhosis_exc[cirrhosis_exc$Drug == "D-penicillamine",],
      xlab = "Days", ylab = "Survival Rate", 
      main = "Survival in Cirrhosis Patients by Day on D-Penicillamine (Complete Cases)", 
      cex.main = .95)
+#umap visualization
+cirrhosis_exc_umap <- 
+  umap::umap(cirrhosis_exc[,c("Bilirubin", "Cholesterol", "Albumin",
+                              "Copper", "Alk_Phos", "SGOT", "Tryglicerides",
+                              "Platelets", "Prothrombin", "Age")])
+plot(cirrhosis_exc_umap$layout, col = as.factor(cirrhosis_exc$Stage))
+plot(cirrhosis_exc_umap$layout, col = as.factor(cirrhosis_exc$Status))
+plot(cirrhosis_exc_umap$layout, col = cirrhosis_exc$N_Days)
 #distribution plots
 plot(density(cirrhosis_exc$Bilirubin))
 plot(density(cirrhosis_exc$Cholesterol))
@@ -74,8 +83,20 @@ plot(density(log(cirrhosis_exc$SGOT)))
 plot(density(log(cirrhosis_exc$Tryglicerides)))
 plot(density(log(cirrhosis_exc$Platelets)))
 plot(density(log(cirrhosis_exc$Prothrombin)))
+
+#transform vars
+cirrhosis_transf <- cirrhosis
+cirrhosis_transf[,c("Bilirubin", "Cholesterol", "Albumin",
+                        "Copper", "Alk_Phos", "SGOT", "Tryglicerides",
+                        "Platelets", "Prothrombin")] <-
+  lapply(cirrhosis_transf[,c("Bilirubin", "Cholesterol", "Albumin",
+                                 "Copper", "Alk_Phos", "SGOT", "Tryglicerides",
+                                 "Platelets", "Prothrombin")], log)
+  
+
 #correlation analyses
-cirrhosis_exc_cor <- polycor::hetcor(cirrhosis_exc)
+cirrhosis_exc_cor <- polycor::hetcor(cirrhosis_transf[, !names(cirrhosis_transf) %in% "ID"])
+heatmap(cirrhosis_exc_cor$correlations)
 
 #--missingness analysis
 summary(cirrhosis)
@@ -92,8 +113,8 @@ VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Sex))
 VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Status))
 mice::fluxplot(cirrhosis)
 
-cirrhosis_quickpred <- mice::quickpred(cirrhosis, minpuc = .3, mincor = .3)
-cirrhosis_mice <- mice::mice(cirrhosis, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
+cirrhosis_quickpred <- mice::quickpred(cirrhosis_transf, minpuc = .3, mincor = .3)
+cirrhosis_mice <- mice::mice(cirrhosis_transf, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
 
 cirrhosis_mice_cox <- with(
   cirrhosis_mice,
