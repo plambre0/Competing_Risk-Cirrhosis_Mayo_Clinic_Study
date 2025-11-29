@@ -1,14 +1,19 @@
+library(dplyr)
 library(VIM)
 library(naniar)
 library(ggplot2)
 library(mice)
 library(survival)
+library(cmprsk)
 
 set.seed(15634)
 
 cirrhosis <- read.csv("C:/Users/Paolo/Desktop/Personal Research/Cirrhosis/cirrhosis.csv")
 
 #--data coding
+cirrhosis$Status[cirrhosis$Status == "CL"] <- 2
+cirrhosis$Status[cirrhosis$Status == "D"] <- 1
+cirrhosis$Status[cirrhosis$Status == "C"] <- 0
 #convert to factors
 cirrhosis[, c("ID", 
                "Status", 
@@ -28,9 +33,6 @@ cirrhosis[, c("ID",
                                                  "Edema",
                                                  "Stage")], as.factor)
 #code vars for censoring and indicator for transplant 
-cirrhosis$ID <- NULL
-cirrhosis$Transplant <- ifelse(cirrhosis$Status == "CL", 0, 1)
-cirrhosis$Status <- ifelse(cirrhosis$Status == "D", 1, 0)
 cirrhosis$Stage <- factor(cirrhosis$Stage, levels = c(1, 2, 3, 4))
 
 #--exploratory analysis
@@ -62,15 +64,38 @@ naniar::vis_miss(cirrhosis) + theme(axis.text.x =  element_text(angle = 90))
 naniar::gg_miss_upset(cirrhosis, nsets = 11)
 naniar::mcar_test(cirrhosis)
 VIM::parcoordMiss(cirrhosis)
-VIM::scattmatrixMiss(data.frame(cirrhosis$Stage, cirrhosis$Age))
-VIM::scattmatrixMiss(data.frame(cirrhosis$Stage, cirrhosis$Sex))
-VIM::scattmatrixMiss(data.frame(cirrhosis$Stage, cirrhosis$Transplant))
-VIM::scattmatrixMiss(data.frame(cirrhosis$N_Days, cirrhosis$Status))
+VIM::marginplot(data.frame(cirrhosis$Stage, cirrhosis$Age))
+VIM::marginplot(data.frame(cirrhosis$Stage, cirrhosis$Sex))
+VIM::marginplot(data.frame(cirrhosis$Stage, cirrhosis$Status))
+VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Age))
+VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Sex))
+VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Status))
 mice::fluxplot(cirrhosis)
 
-cirrhosis_mice <- mice::mice(cirrhosis, m = 5, maxit = 50)
-cirrhosis_mice_km <- with(cirrhosis_mice, coxph(Surv(N_Days, Status) ~ Drug + Age + Sex + Stage + Ascites + Hepatomegaly + Spiders + Edema + Bilirubin + Cholesterol + Albumin + Copper + Alk_Phos + SGOT + Tryglicerides + Platelets + Prothrombin))
-cirrhosis_mice_km_pooled <- pool(cirrhosis_mice_km)
-summary(cirrhosis_mice_km_pooled)
+cirrhosis_quickpred <- mice::quickpred(cirrhosis, minpuc = .3, mincor = .3)
+cirrhosis_mice <- mice::mice(cirrhosis, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
 
-lapply(cirrhosis_mice_km, survfit)
+cirrhosis_mice_cox <- with(
+  cirrhosis_mice,
+  coxph(
+    Surv(N_Days, Status) ~ 
+      Drug + Age + Sex + Stage + Ascites + Hepatomegaly + Spiders +
+      Edema + Bilirubin + Cholesterol + Albumin + Copper + Alk_Phos +
+      SGOT + Tryglicerides + Platelets + Prothrombin +
+      cluster(ID),
+    id = ID
+  )
+)
+cirrhosis_mice_cox_pooled <- pool(cirrhosis_mice_cox)
+summary(cirrhosis_mice_cox_pooled)
+
+cirrhosis_mice_fg <- with(
+  cirrhosis_mice,
+  crr(ftime = N_Days,
+      fstatus = Status,
+      cov1 = model.matrix(~ Drug + Age + Sex + Stage + Ascites + Hepatomegaly +
+                            Spiders + Edema + Bilirubin + Cholesterol + Albumin +
+                            Copper + Alk_Phos + SGOT + Tryglicerides + Platelets +
+                            Prothrombin)[,-1]))
+fg_pooled <- pool(cirrhosis_mice_fg)
+summary(fg_pooled)
