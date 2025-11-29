@@ -54,6 +54,26 @@ plot(survfit(data = cirrhosis_exc[cirrhosis_exc$Drug == "D-penicillamine",],
      xlab = "Days", ylab = "Survival Rate", 
      main = "Survival in Cirrhosis Patients by Day on D-Penicillamine (Complete Cases)", 
      cex.main = .95)
+#distribution plots
+plot(density(cirrhosis_exc$Bilirubin))
+plot(density(cirrhosis_exc$Cholesterol))
+plot(density(cirrhosis_exc$Albumin))
+plot(density(cirrhosis_exc$Copper))
+plot(density(cirrhosis_exc$Alk_Phos))
+plot(density(cirrhosis_exc$SGOT))
+plot(density(cirrhosis_exc$Tryglicerides))
+plot(density(cirrhosis_exc$Platelets))
+plot(density(cirrhosis_exc$Prothrombin))
+#transformed distribution plots
+plot(density(log(cirrhosis_exc$Bilirubin)))
+plot(density(log(cirrhosis_exc$Cholesterol)))
+plot(density(log(cirrhosis_exc$Albumin)))
+plot(density(log(cirrhosis_exc$Copper)))
+plot(density(log(cirrhosis_exc$Alk_Phos)))
+plot(density(log(cirrhosis_exc$SGOT)))
+plot(density(log(cirrhosis_exc$Tryglicerides)))
+plot(density(log(cirrhosis_exc$Platelets)))
+plot(density(log(cirrhosis_exc$Prothrombin)))
 #correlation analyses
 cirrhosis_exc_cor <- polycor::hetcor(cirrhosis_exc)
 
