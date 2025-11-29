@@ -116,6 +116,7 @@ mice::fluxplot(cirrhosis)
 cirrhosis_quickpred <- mice::quickpred(cirrhosis_transf, minpuc = .3, mincor = .3)
 cirrhosis_mice <- mice::mice(cirrhosis_transf, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
 
+#multi-state cox
 cirrhosis_mice_cox <- with(
   cirrhosis_mice,
   coxph(
@@ -130,6 +131,7 @@ cirrhosis_mice_cox <- with(
 cirrhosis_mice_cox_pooled <- pool(cirrhosis_mice_cox)
 summary(cirrhosis_mice_cox_pooled)
 
+#fine-grey model
 cirrhosis_mice_fg <- with(
   cirrhosis_mice,
   crr(ftime = N_Days,
@@ -140,3 +142,4 @@ cirrhosis_mice_fg <- with(
                             Prothrombin)[,-1]))
 fg_pooled <- pool(cirrhosis_mice_fg)
 summary(fg_pooled)
+
