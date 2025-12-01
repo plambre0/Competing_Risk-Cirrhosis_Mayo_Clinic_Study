@@ -6,6 +6,7 @@ library(umap)
 library(mice)
 library(survival)
 library(cmprsk)
+library(gtsummary)
 
 set.seed(15634)
 
@@ -37,6 +38,7 @@ cirrhosis[, c("ID",
 cirrhosis$Stage <- factor(cirrhosis$Stage, levels = c(1, 2, 3, 4))
 
 #--exploratory analysis
+summary(cirrhosis)
 #for data exploration, using complete case analysis
 cirrhosis_exc <- na.exclude(cirrhosis)
 #plot comp case curves
@@ -63,6 +65,13 @@ cirrhosis_exc_umap <-
 plot(cirrhosis_exc_umap$layout, col = as.factor(cirrhosis_exc$Stage))
 plot(cirrhosis_exc_umap$layout, col = as.factor(cirrhosis_exc$Status))
 plot(cirrhosis_exc_umap$layout, col = cirrhosis_exc$N_Days)
+plot(survfit(Surv(N_Days, Status==1) ~ Stage, data = cirrhosis_exc))
+plot(survfit(Surv(N_Days, Status==1) ~ Sex, data = cirrhosis_exc))
+plot(survfit(Surv(N_Days, Status==1) ~ Drug, data = cirrhosis_exc))
+plot(survfit(Surv(N_Days, Status==2) ~ Bilirubin > 1.2, data = cirrhosis_exc))
+plot(survfit(Surv(N_Days, Status==2) ~ Cholesterol > 200, data = cirrhosis_exc))
+plot(survfit(Surv(N_Days, Status==2) ~ Albumin < 3.5, data = cirrhosis_exc))
+
 #distribution plots
 plot(density(cirrhosis_exc$Bilirubin))
 plot(density(cirrhosis_exc$Cholesterol))
@@ -99,7 +108,6 @@ cirrhosis_exc_cor <- polycor::hetcor(cirrhosis_transf[, !names(cirrhosis_transf)
 heatmap(cirrhosis_exc_cor$correlations)
 
 #--missingness analysis
-summary(cirrhosis)
 naniar::miss_var_summary(cirrhosis)
 naniar::vis_miss(cirrhosis) + theme(axis.text.x =  element_text(angle = 90))
 naniar::gg_miss_upset(cirrhosis, nsets = 11)
@@ -116,6 +124,25 @@ mice::fluxplot(cirrhosis)
 cirrhosis_quickpred <- mice::quickpred(cirrhosis_transf, minpuc = .3, mincor = .3)
 cirrhosis_mice <- mice::mice(cirrhosis_transf, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
 
+cirrhosis_mice_cox_td <- with(
+  cirrhosis_mice,
+  coxph(
+    Surv(N_Days, Status == 1) ~
+      Drug + Age + Sex + Stage + Ascites + Hepatomegaly + Spiders +
+      Edema + Bilirubin + Cholesterol + Albumin + Copper + Alk_Phos +
+      SGOT + Tryglicerides + Platelets + Prothrombin +
+      
+      # time interactions
+      tt(Age) + tt(Bilirubin) + tt(Cholesterol) + tt(Albumin) + tt(Copper) +
+      tt(Alk_Phos) + tt(SGOT) + tt(Tryglicerides) + tt(Platelets) + 
+      tt(Prothrombin),
+    
+    tt = function(x, t, ...) x * log(t)
+  )
+)
+ph_pooled <- pool(cirrhosis_mice_cox_td)
+summary(ph_pooled)
+
 #multi-state cox
 cirrhosis_mice_cox <- with(
   cirrhosis_mice,
@@ -128,7 +155,6 @@ cirrhosis_mice_cox <- with(
     id = ID
   )
 )
-cirrhosis_mice_cox_pooled <- pool(cirrhosis_mice_cox)
 summary(cirrhosis_mice_cox_pooled)
 
 #fine-grey model
@@ -142,4 +168,3 @@ cirrhosis_mice_fg <- with(
                             Prothrombin)[,-1]))
 fg_pooled <- pool(cirrhosis_mice_fg)
 summary(fg_pooled)
-
