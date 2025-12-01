@@ -121,10 +121,12 @@ VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Sex))
 VIM::marginplot(data.frame(cirrhosis$N_Days, cirrhosis$Status))
 mice::fluxplot(cirrhosis)
 
+#multiple imputation
 cirrhosis_quickpred <- mice::quickpred(cirrhosis_transf, minpuc = .3, mincor = .3)
 cirrhosis_mice <- mice::mice(cirrhosis_transf, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
 plot(cirrhosis_mice)
 
+#check assumptions
 cirrhosis_mice_cox_td <- with(
   cirrhosis_mice,
   coxph(
@@ -150,13 +152,27 @@ cirrhosis_mice_cox <- with(
   coxph(
     Surv(N_Days, Status) ~ 
       Drug + Age + Sex + Stage + Ascites + Hepatomegaly + Spiders +
-      Edema + Bilirubin + Cholesterol + Albumin + Copper + Alk_Phos +
-      SGOT + Tryglicerides + Platelets + Prothrombin +
+      Edema + Bilirubin + Albumin + Copper + Alk_Phos +
+      SGOT + Tryglicerides + Platelets +
       cluster(ID),
     id = ID
   )
 )
 summary(cirrhosis_mice_cox_pooled)
+
+#interaction model for drug and stage
+cirrhosis_mice_fg_inter <- with(
+  cirrhosis_mice,
+  crr(
+    ftime = N_Days,
+    fstatus = (Status == 1),
+    cov1 = model.matrix(~ Drug * Stage + Age + Sex + Ascites + Hepatomegaly + 
+                          Spiders + Edema + Bilirubin + Albumin + 
+                          Copper + Alk_Phos + SGOT + Tryglicerides + Platelets)[,-1]
+  )
+)
+fg_pooled_inter <- pool(cirrhosis_mice_fg_inter)
+summary(fg_pooled_inter)
 
 #fine-grey model
 cirrhosis_mice_fg <- with(
@@ -164,8 +180,7 @@ cirrhosis_mice_fg <- with(
   crr(ftime = N_Days,
       fstatus = Status,
       cov1 = model.matrix(~ Drug + Age + Sex + Stage + Ascites + Hepatomegaly +
-                            Spiders + Edema + Bilirubin + Cholesterol + Albumin +
-                            Copper + Alk_Phos + SGOT + Tryglicerides + Platelets +
-                            Prothrombin)[,-1]))
+                            Spiders + Edema + Bilirubin + Albumin + Copper + 
+                            Alk_Phos + SGOT + Tryglicerides + Platelets)[,-1]))
 fg_pooled <- pool(cirrhosis_mice_fg)
 summary(fg_pooled)
