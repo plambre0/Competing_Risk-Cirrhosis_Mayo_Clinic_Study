@@ -123,6 +123,7 @@ mice::fluxplot(cirrhosis)
 
 cirrhosis_quickpred <- mice::quickpred(cirrhosis_transf, minpuc = .3, mincor = .3)
 cirrhosis_mice <- mice::mice(cirrhosis_transf, m = 5, maxit = 50, predictorMatrix = cirrhosis_quickpred)
+plot(cirrhosis_mice)
 
 cirrhosis_mice_cox_td <- with(
   cirrhosis_mice,
