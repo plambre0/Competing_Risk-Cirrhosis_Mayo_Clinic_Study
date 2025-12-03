@@ -1,5 +1,5 @@
 Aim:
-In Dickson et al.'s study, transplants resulted in censored observations and ultimately, less usable cases. While it is already known that D-penicillamine is harmful for patients with cirrhosis, it is still an interesting proespect to re-examine the data using more modern methods that can account for competing risks, like Fine-Grey models. There is a sizable proportion of the data with missing outcomes and stages, so MICE was used to account for this uncertainty.
+In Dickson et al.'s study, transplants resulted in censored observations and ultimately, less usable cases. While it is already known that D-penicillamine is harmful for patients with cirrhosis, it is still an interesting proespect to re-examine the data using more modern methods that can account for competing risks, like Fine-Grey models.
 
 Dataset Source:
 Dickson, E.R., Grambsch, P.M., Fleming, T.R., Fisher, L.D., & Langworthy, A. (1989). Prognosis in primary biliary cirrhosis: Model for decision making. Hepatology, 10.
